@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Master } from '../types/game';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface MasterAvatarProps {
   master: Master | null;
@@ -35,22 +34,22 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
 
   return (
     <div className={`relative ${isActive ? 'ring-2 ring-white' : ''}`}>
-      <Avatar 
+      <div 
         className={`
-          w-20 h-20 ${getBackgroundColor()} shadow-lg
+          w-16 h-16 rounded-full flex items-center justify-center shadow-lg
+          ${getBackgroundColor()}
           transition-all duration-300
-          ${animate ? 'animate-pulse scale-110' : ''}
-          ${isAbilityActive ? 'ring-4 ring-yellow-400' : ''}
+          ${animate ? 'animate-scale-up' : ''}
+          ${isAbilityActive ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
         `}
       >
-        <AvatarImage src={`/avatars/${master.id}.png`} alt={master.name} />
-        <AvatarFallback className="text-white font-bold text-2xl">
+        <span className="text-white font-bold text-xl">
           {master.name.charAt(0)}
-        </AvatarFallback>
-      </Avatar>
+        </span>
+      </div>
       
       {isAbilityActive && (
-        <div className="absolute -top-3 -right-3 bg-yellow-400 text-xs font-bold px-2 py-1 rounded-full animate-bounce shadow-md">
+        <div className="absolute -top-3 -right-3 bg-yellow-400 text-xs font-bold px-2 py-1 rounded-full animate-bounce">
           ACTIVE!
         </div>
       )}
