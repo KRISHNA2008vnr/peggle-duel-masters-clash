@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Master } from '../types/game';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface MasterAvatarProps {
   master: Master | null;
@@ -44,28 +45,20 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
     }
   };
   
-  const getMasterImage = () => {
-    switch (master.id) {
-      case 'bjorn': return '/lovable-uploads/47d8f459-e970-4c0f-be45-27358debd5e4.png';
-      case 'gnorman': return '/lovable-uploads/47d8f459-e970-4c0f-be45-27358debd5e4.png';
-      case 'luna': return '/lovable-uploads/47d8f459-e970-4c0f-be45-27358debd5e4.png';
-      case 'jeff': return '/lovable-uploads/47d8f459-e970-4c0f-be45-27358debd5e4.png';
-      case 'berg': return '/lovable-uploads/47d8f459-e970-4c0f-be45-27358debd5e4.png';
-      default: return '';
-    }
-  };
+  // Use the provided player icon for all masters
+  const playerIconImage = "/lovable-uploads/9ef185f3-6271-499a-8a63-238bfc247e0a.png";
 
   return (
     <div className={`relative ${isActive ? 'scale-110' : ''} transition-all duration-300`}>
-      <div className={`
+      <div className={cn(`
         relative rounded-full overflow-hidden
         ${isActive ? 'ring-4 ring-white shadow-[0_0_15px_rgba(255,255,255,0.8)]' : ''} 
         ${animate ? 'animate-pulse' : ''}
         ${isAbilityActive ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(255,215,0,0.8)]' : ''}
-      `}>
-        <Avatar className={`w-16 h-16 border-4 ${getMasterBorderColor()}`}>
-          <AvatarImage src={getMasterImage()} alt={master.name} className="object-cover" />
-          <AvatarFallback className={`${getMasterBackgroundGradient()} text-white font-bold text-xl`}>
+      `)}>
+        <Avatar className={cn(`w-16 h-16 border-4 ${getMasterBorderColor()}`)}>
+          <AvatarImage src={playerIconImage} alt={master.name} className="object-cover" />
+          <AvatarFallback className={cn(`${getMasterBackgroundGradient()} text-white font-bold text-xl`)}>
             {master.name.charAt(0)}
           </AvatarFallback>
         </Avatar>
@@ -84,12 +77,12 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
       )}
       
       {/* Master title text */}
-      <div className={`
+      <div className={cn(`
         absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-center
         font-bold text-xs px-2 py-1 rounded-md shadow-md w-24
         ${getMasterBackgroundGradient()} text-white opacity-90
         ${isActive ? 'opacity-100' : 'opacity-70'}
-      `}>
+      `)}>
         {master.name}
       </div>
       
