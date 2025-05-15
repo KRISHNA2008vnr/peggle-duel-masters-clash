@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Peg, Ball } from '../types/game';
+import { Peg, Ball, Master } from '../types/game';
+import { toast } from '@/hooks/use-toast';
 
 // Constants for the game
 export const BOARD_WIDTH = 800;
@@ -17,14 +18,14 @@ export const generateId = (): string => {
 };
 
 // Function to generate a random layout of pegs
-export const generateRandomLayout = (): Peg[] => {
+export const generateRandomLayout = (specialPegCount: { green: number, purple: number } = { green: 2, purple: 3 }): Peg[] => {
   const pegs: Peg[] = [];
   const gridSize = 50; // Space between pegs
   const margin = 100; // Margin from the edges
   
   // Create a grid layout with some randomization
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 12; col++) {
       // Skip some positions randomly to create a more interesting layout
       if (Math.random() < 0.3) continue;
       
@@ -32,29 +33,47 @@ export const generateRandomLayout = (): Peg[] => {
       const x = margin + col * gridSize + Math.random() * 20 - 10;
       const y = margin + row * gridSize + Math.random() * 20 - 10;
       
-      // Determine peg type based on probabilities
-      let type: 'blue' | 'orange' | 'green' | 'purple';
-      const rand = Math.random();
-      
-      if (rand < 0.7) {
-        type = 'blue'; // 70% blue
-      } else if (rand < 0.9) {
-        type = 'orange'; // 20% orange
-      } else if (rand < 0.95) {
-        type = 'green'; // 5% green
-      } else {
-        type = 'purple'; // 5% purple
-      }
-      
-      // Create the peg
+      // Create standard blue pegs
       pegs.push({
         id: generateId(),
-        type,
+        type: 'blue',
         x,
         y,
         radius: PEG_RADIUS,
         active: true
       });
+    }
+  }
+  
+  // Now convert some random pegs to orange
+  const orangeCount = Math.floor(pegs.length * 0.2); // 20% of pegs are orange
+  
+  for (let i = 0; i < orangeCount && i < pegs.length; i++) {
+    const randomIndex = Math.floor(Math.random() * pegs.length);
+    if (pegs[randomIndex].type === 'blue') { // Only convert blue pegs
+      pegs[randomIndex].type = 'orange';
+    } else {
+      // Try again
+      i--;
+    }
+  }
+  
+  // Create special pegs (green and purple)
+  // This ensures they're distributed across the board
+  const specialTypes = [
+    ...Array(specialPegCount.green).fill('green'), 
+    ...Array(specialPegCount.purple).fill('purple')
+  ];
+  
+  for (const specialType of specialTypes) {
+    let placed = false;
+    
+    while (!placed) {
+      const randomIndex = Math.floor(Math.random() * pegs.length);
+      if (pegs[randomIndex].type === 'blue') {
+        pegs[randomIndex].type = specialType as 'green' | 'purple';
+        placed = true;
+      }
     }
   }
   
@@ -107,18 +126,55 @@ const handleCollision = (ball: Ball, peg: Peg): Ball => {
 };
 
 // Hook for game physics and interactions
-export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => void) => {
+export const useGamePhysics = (
+  activePegs: Peg[],
+  currentMaster: Master | null,
+  isAbilityActive: boolean,
+  onHitPeg: (pegId: string) => void,
+  onAbilityActivated: () => void
+) => {
   const [ball, setBall] = useState<Ball | null>(null);
   const [aimAngle, setAimAngle] = useState<number>(0);
+  const [trajectoryLength, setTrajectoryLength] = useState<number>(10);
+  
+  // Update trajectory length based on active ability
+  useEffect(() => {
+    if (isAbilityActive && currentMaster?.id === 'bjorn') {
+      setTrajectoryLength(25); // Bjorn's longer trajectory
+      toast({
+        title: "Super Guide Active!",
+        description: "Your trajectory path is extended",
+      });
+    } else {
+      setTrajectoryLength(10);
+    }
+  }, [isAbilityActive, currentMaster]);
   
   // Function to launch the ball
   const launchBall = (startX: number, startY: number, velocityX: number, velocityY: number) => {
+    // Adjust velocity based on active abilities
+    let adjustedVx = velocityX;
+    let adjustedVy = velocityY;
+    let adjustedRadius = BALL_RADIUS;
+    
+    // Boulder Throw ability - bigger ball with more power
+    if (isAbilityActive && currentMaster?.id === 'jeff') {
+      adjustedRadius = BALL_RADIUS * 1.8;
+      adjustedVx *= 1.2;
+      adjustedVy *= 1.2;
+      toast({
+        title: "Boulder Throw Active!",
+        description: "Your ball is larger and more powerful",
+      });
+    }
+    
+    // Create the ball with appropriate properties
     setBall({
       x: startX,
       y: startY,
-      vx: velocityX,
-      vy: velocityY,
-      radius: BALL_RADIUS
+      vx: adjustedVx,
+      vy: adjustedVy,
+      radius: adjustedRadius
     });
   };
   
@@ -127,8 +183,17 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     if (!currentBall) return null;
     
     // Apply gravity and friction
-    const newVx = currentBall.vx * FRICTION;
-    const newVy = currentBall.vy * FRICTION + GRAVITY;
+    let friction = FRICTION;
+    let gravity = GRAVITY;
+    
+    // Deep Freeze ability - reduced friction
+    if (isAbilityActive && currentMaster?.id === 'berg') {
+      friction = 0.995; // Less friction for slippery effect
+      gravity = 0.15; // Slightly reduced gravity
+    }
+    
+    const newVx = currentBall.vx * friction;
+    const newVy = currentBall.vy * friction + gravity;
     
     // Calculate new position
     const newX = currentBall.x + newVx;
@@ -143,11 +208,11 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     let finalVx = newVx;
     let finalX = newX;
     
-    if (newX < BALL_RADIUS) {
-      finalX = BALL_RADIUS;
+    if (newX < currentBall.radius) {
+      finalX = currentBall.radius;
       finalVx = -newVx * BOUNCE_FACTOR;
-    } else if (newX > BOARD_WIDTH - BALL_RADIUS) {
-      finalX = BOARD_WIDTH - BALL_RADIUS;
+    } else if (newX > BOARD_WIDTH - currentBall.radius) {
+      finalX = BOARD_WIDTH - currentBall.radius;
       finalVx = -newVx * BOUNCE_FACTOR;
     }
     
@@ -157,7 +222,7 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
       y: newY,
       vx: finalVx,
       vy: newVy,
-      radius: BALL_RADIUS
+      radius: currentBall.radius
     };
   };
   
@@ -168,20 +233,55 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     const gameLoop = setInterval(() => {
       // Check collisions with pegs
       let updatedBall = { ...ball };
-      let hitPegId: string | null = null;
+      
+      // For Luna's ability, only check collisions with non-blue pegs
+      const visiblePegs = isAbilityActive && currentMaster?.id === 'luna'
+        ? activePegs.filter(peg => peg.type !== 'blue')
+        : activePegs;
+      
+      let hitPegIds: string[] = [];
       
       // Check all pegs for collision
-      for (const peg of activePegs) {
+      for (const peg of visiblePegs) {
         if (checkCollision(updatedBall, peg)) {
           updatedBall = handleCollision(updatedBall, peg);
-          hitPegId = peg.id;
-          break;
+          hitPegIds.push(peg.id);
         }
       }
       
-      // If a peg was hit, trigger the callback
-      if (hitPegId) {
-        onHitPeg(hitPegId);
+      // Process hits - in reverse to avoid index shifting issues
+      for (let i = hitPegIds.length - 1; i >= 0; i--) {
+        // For Gnorman's ability, chain reactions to nearby pegs
+        if (isAbilityActive && currentMaster?.id === 'gnorman' && activePegs.find(p => p.id === hitPegIds[i])?.type !== 'green') {
+          // Find nearby pegs and mark them as hit too
+          const hitPeg = activePegs.find(p => p.id === hitPegIds[i]);
+          if (hitPeg) {
+            const nearbyPegs = activePegs.filter(p => {
+              if (!p.active || hitPegIds.includes(p.id)) return false;
+              
+              const dx = p.x - hitPeg.x;
+              const dy = p.y - hitPeg.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              return distance < 80; // Chain reaction distance
+            });
+            
+            // Add these pegs to hit list
+            hitPegIds.push(...nearbyPegs.map(p => p.id));
+          }
+        }
+        
+        onHitPeg(hitPegIds[i]);
+      }
+      
+      // If we hit a green peg, activate the ability
+      const hitGreenPeg = hitPegIds.some(id => {
+        const peg = activePegs.find(p => p.id === id);
+        return peg && peg.type === 'green';
+      });
+      
+      if (hitGreenPeg) {
+        onAbilityActivated();
       }
       
       // Update ball position
@@ -199,7 +299,7 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     }, 16); // ~60 FPS
     
     return () => clearInterval(gameLoop);
-  }, [ball, activePegs, onHitPeg]);
+  }, [ball, activePegs, onHitPeg, isAbilityActive, currentMaster, onAbilityActivated]);
   
   // Function to set the aim angle for the trajectory
   const setAim = (angle: number) => {
@@ -207,7 +307,7 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
   };
   
   // Calculate trajectory points for aiming
-  const calculateTrajectory = (startX: number, startY: number, angle: number, length: number = 10) => {
+  const calculateTrajectory = (startX: number, startY: number, angle: number, length: number = trajectoryLength) => {
     const points = [];
     const velocityX = Math.cos(angle) * 10;
     const velocityY = Math.sin(angle) * 10;
@@ -216,10 +316,15 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     let vx = velocityX;
     let vy = velocityY;
     
+    // Use customized trajectory for super guide
+    const trajectoryFriction = isAbilityActive && currentMaster?.id === 'bjorn' ? 0.99 : FRICTION;
+    const trajectoryGravity = GRAVITY;
+    
     for (let i = 0; i < length; i++) {
       x += vx;
       y += vy;
-      vy += GRAVITY;
+      vx *= trajectoryFriction;
+      vy = vy * trajectoryFriction + trajectoryGravity;
       
       points.push({ x, y });
       
@@ -237,7 +342,8 @@ export const useGamePhysics = (activePegs: Peg[], onHitPeg: (pegId: string) => v
     launchBall,
     setAim,
     aimAngle,
-    calculateTrajectory
+    calculateTrajectory,
+    trajectoryLength
   };
 };
 

@@ -1,7 +1,8 @@
 
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useState } from 'react';
 import { GameState, Player, Master, Peg, Ball, GamePhase } from '../types/game';
 import { generateRandomLayout } from '../hooks/useGameLogic';
+import PlayerNameModal from '../components/PlayerNameModal';
 
 // Masters data with abilities
 const masters: Master[] = [
@@ -84,7 +85,8 @@ type Action =
   | { type: 'ACTIVATE_ABILITY', masterId: string }
   | { type: 'END_TURN' }
   | { type: 'END_GAME' }
-  | { type: 'RESET_GAME' };
+  | { type: 'RESET_GAME' }
+  | { type: 'SET_PLAYER_NAMES', player1Name: string, player2Name: string };
 
 // Reducer
 function gameReducer(state: GameState, action: Action): GameState {
@@ -97,11 +99,20 @@ function gameReducer(state: GameState, action: Action): GameState {
         )
       };
     
+    case 'SET_PLAYER_NAMES':
+      return {
+        ...state,
+        players: [
+          { ...state.players[0], name: action.player1Name },
+          { ...state.players[1], name: action.player2Name }
+        ]
+      };
+    
     case 'START_GAME':
       return {
         ...state,
         phase: 'aiming',
-        pegs: generateRandomLayout()
+        pegs: generateRandomLayout({ green: 2, purple: 3 }) // Generate with specific special peg counts
       };
       
     case 'SETUP_BOARD':
@@ -163,8 +174,7 @@ function gameReducer(state: GameState, action: Action): GameState {
       };
       
     case 'ACTIVATE_ABILITY':
-      // Logic for activating a master's ability
-      // This would be more complex in a full implementation
+      // In a full implementation, we'd have more complex ability logic here
       return state;
       
     case 'END_TURN':
@@ -223,7 +233,7 @@ function gameReducer(state: GameState, action: Action): GameState {
         players: [
           {
             id: 1,
-            name: 'Player 1',
+            name: state.players[0].name, // Keep player names
             score: 0,
             master: null,
             shotsLeft: 10,
@@ -232,7 +242,7 @@ function gameReducer(state: GameState, action: Action): GameState {
           },
           {
             id: 2,
-            name: 'Player 2',
+            name: state.players[1].name, // Keep player names
             score: 0,
             master: null,
             shotsLeft: 10,
@@ -261,9 +271,19 @@ const GameContext = createContext<{
 // Provider component
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [showPlayerNameModal, setShowPlayerNameModal] = useState(true);
+  
+  const handlePlayerNames = (player1Name: string, player2Name: string) => {
+    dispatch({ type: 'SET_PLAYER_NAMES', player1Name, player2Name });
+    setShowPlayerNameModal(false);
+  };
   
   return (
     <GameContext.Provider value={{ state, dispatch, masters }}>
+      <PlayerNameModal 
+        open={showPlayerNameModal} 
+        onSubmit={handlePlayerNames} 
+      />
       {children}
     </GameContext.Provider>
   );
