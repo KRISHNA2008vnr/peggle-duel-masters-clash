@@ -48,24 +48,36 @@ const Ball: React.FC<BallProps> = ({ ball }) => {
   return (
     <div
       ref={ballRef}
-      className="absolute bg-gradient-to-b from-white to-gray-200 rounded-full shadow-lg border border-gray-300 animate-pulse"
+      className="absolute rounded-full z-20"
       style={{
         width: `${ball.radius * 2}px`,
         height: `${ball.radius * 2}px`,
         left: `${ball.x - ball.radius}px`,
         top: `${ball.y - ball.radius}px`,
-        boxShadow: '0 0 10px rgba(255,255,255,0.8)',
-        transition: 'box-shadow 0.2s ease'
+        background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(230,230,240,1) 70%, rgba(200,200,210,1) 100%)',
+        boxShadow: '0 0 15px rgba(255,255,255,0.8), inset 0 0 8px rgba(0,0,0,0.2)',
+        border: '1px solid rgba(180,180,190,0.8)'
       }}
     >
       {/* Shine effect */}
       <div 
-        className="absolute rounded-full bg-white/50" 
+        className="absolute rounded-full bg-white/80" 
         style={{
           width: '40%',
           height: '40%',
           top: '15%',
           left: '15%'
+        }}
+      />
+      
+      {/* Secondary shine */}
+      <div 
+        className="absolute rounded-full bg-white/40" 
+        style={{
+          width: '20%',
+          height: '20%',
+          bottom: '25%',
+          right: '20%'
         }}
       />
     </div>
