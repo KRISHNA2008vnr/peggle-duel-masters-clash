@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,23 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Peggle specific colors
+				peggle: {
+					background: '#2D3250',
+					blue: '#3498db',
+					orange: '#ff9f43',
+					green: '#2ecc71',
+					purple: '#9b59b6',
+					yellow: '#f1c40f',
+					red: '#e74c3c'
+				},
+				master: {
+					bjorn: '#4dabf7',
+					gnorman: '#fcc419',
+					luna: '#9775fa',
+					jeff: '#f06595',
+					berg: '#4dabf7'
 				}
 			},
 			borderRadius: {
@@ -70,25 +88,48 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
+				},
+				bounce: {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-20px)' }
+				},
+				pulse: {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.5' }
+				},
+				'scale-up': {
+					'0%': { transform: 'scale(1)' },
+					'50%': { transform: 'scale(1.2)' },
+					'100%': { transform: 'scale(1)' }
+				},
+				'fade-in': {
+					'0%': { opacity: '0' },
+					'100%': { opacity: '1' }
+				},
+				'fade-out': {
+					'0%': { opacity: '1' },
+					'100%': { opacity: '0' }
+				},
+				spin: {
+					from: { transform: 'rotate(0deg)' },
+					to: { transform: 'rotate(360deg)' }
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'bounce': 'bounce 0.5s ease-in-out',
+				'pulse': 'pulse 1.5s ease-in-out infinite',
+				'scale-up': 'scale-up 0.3s ease-in-out',
+				'fade-in': 'fade-in 0.3s ease-in-out',
+				'fade-out': 'fade-out 0.3s ease-in-out',
+				'spin': 'spin 1s linear infinite',
 			}
 		}
 	},
