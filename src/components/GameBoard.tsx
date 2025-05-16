@@ -3,22 +3,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useGamePhysics, getPointsForPegType, BOARD_WIDTH, BOARD_HEIGHT } from '../hooks/useGameLogic';
 import { toast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
 import Peg from './Peg';
 import Ball from './Ball';
 import MasterAvatar from './MasterAvatar';
 
-// Position of the launcher at the top
-const LAUNCHER_Y = 50; 
+const LAUNCHER_Y = 50; // Position of the launcher at the top
 
 const GameBoard: React.FC = () => {
   const { state, dispatch } = useGame();
   const [aimPosition, setAimPosition] = useState({ x: BOARD_WIDTH / 2, y: LAUNCHER_Y });
   const [isAbilityActive, setIsAbilityActive] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const { isMobile } = useMobile();
-  const [boardScale, setBoardScale] = useState(1);
-  const [isTouching, setIsTouching] = useState(false);
   
   // Get current player and their master
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
@@ -28,26 +23,6 @@ const GameBoard: React.FC = () => {
   useEffect(() => {
     setIsAbilityActive(false);
   }, [state.currentPlayerId]);
-  
-  // Responsive scaling for the game board
-  useEffect(() => {
-    const updateBoardScale = () => {
-      if (!boardRef.current) return;
-      
-      const containerWidth = boardRef.current.parentElement?.clientWidth || window.innerWidth;
-      const targetWidth = Math.min(containerWidth - 32, BOARD_WIDTH);
-      const newScale = targetWidth / BOARD_WIDTH;
-      
-      setBoardScale(newScale);
-    };
-    
-    updateBoardScale();
-    window.addEventListener('resize', updateBoardScale);
-    
-    return () => {
-      window.removeEventListener('resize', updateBoardScale);
-    };
-  }, []);
   
   // Handle peg hit event
   const handleHitPeg = (pegId: string) => {
@@ -132,66 +107,25 @@ const GameBoard: React.FC = () => {
     }
   }, [ball, state.phase, state.ballActive, dispatch]);
   
-  // Touch event handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (state.phase !== 'aiming' || !boardRef.current) return;
-    setIsTouching(true);
-    
-    const rect = boardRef.current.getBoundingClientRect();
-    const touchX = (e.touches[0].clientX - rect.left) / boardScale;
-    const touchY = (e.touches[0].clientY - rect.top) / boardScale;
-    
-    handleAim(touchX, touchY);
-  };
-  
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (state.phase !== 'aiming' || !isTouching || !boardRef.current) return;
-    
-    const rect = boardRef.current.getBoundingClientRect();
-    const touchX = (e.touches[0].clientX - rect.left) / boardScale;
-    const touchY = (e.touches[0].clientY - rect.top) / boardScale;
-    
-    handleAim(touchX, touchY);
-  };
-  
-  const handleTouchEnd = () => {
-    if (state.phase !== 'aiming' || !isTouching) return;
-    setIsTouching(false);
-    
-    // Launch the ball on touch release
-    handleShoot();
-  };
-  
-  // Mouse event handlers for desktop
+  // Handle mouse move for aiming
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (state.phase !== 'aiming' || !boardRef.current || isMobile) return;
+    if (state.phase !== 'aiming' || !boardRef.current) return;
     
     const rect = boardRef.current.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) / boardScale;
-    const mouseY = (e.clientY - rect.top) / boardScale;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     
-    handleAim(mouseX, mouseY);
-  };
-  
-  const handleMouseClick = () => {
-    if (state.phase !== 'aiming' || state.ballActive || isMobile) return;
-    
-    handleShoot();
-  };
-  
-  // Common aiming function for both touch and mouse
-  const handleAim = (x: number, y: number) => {
     // Calculate angle for aiming
-    const dx = x - aimPosition.x;
-    const dy = y - aimPosition.y;
+    const dx = mouseX - aimPosition.x;
+    const dy = mouseY - aimPosition.y;
     const angle = Math.atan2(dy, dx);
     
     // Update aim
     setAim(angle);
   };
   
-  // Common shoot function for both touch and mouse
-  const handleShoot = () => {
+  // Handle mouse click for shooting
+  const handleMouseClick = () => {
     if (state.phase !== 'aiming' || state.ballActive) return;
     
     // Set phase to shooting
@@ -222,20 +156,15 @@ const GameBoard: React.FC = () => {
     <div 
       ref={boardRef}
       data-game-board
-      className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-blue-800 mx-auto touch-none"
+      className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-blue-800"
       style={{ 
         width: `${BOARD_WIDTH}px`, 
         height: `${BOARD_HEIGHT}px`,
         backgroundImage: 'linear-gradient(180deg, rgba(100,130,220,0.8) 0%, rgba(70,90,180,0.8) 100%)',
-        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)',
-        transform: `scale(${boardScale})`,
-        transformOrigin: 'top center',
+        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)'
       }}
       onMouseMove={handleMouseMove}
       onClick={handleMouseClick}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Background elements */}
       <div className="absolute inset-0 bg-cover bg-center opacity-40" 
@@ -301,15 +230,14 @@ const GameBoard: React.FC = () => {
       <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-blue-900 to-blue-800 border-r-2 border-blue-700 opacity-80 z-30"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-blue-900 to-blue-800 border-l-2 border-blue-700 opacity-80 z-30"></div>
       
-      {/* Player indicators - Responsive layout */}
-      <div className={`absolute top-2 left-20 right-20 ${isMobile ? 'flex-col space-y-2' : 'flex justify-between'} items-center z-40`}>
+      {/* Player indicators */}
+      <div className="absolute top-2 left-20 right-20 flex justify-between items-center z-40">
         {/* Player 1 indicator */}
         <div className={`
           flex items-center space-x-2 p-2 rounded-lg
           ${state.currentPlayerId === 1 ? 
             'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border border-blue-400 shadow-lg' :
             'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
-          ${isMobile ? 'w-full' : ''}
         `}>
           <MasterAvatar
             master={state.players[0].master}
@@ -329,9 +257,8 @@ const GameBoard: React.FC = () => {
           ${state.currentPlayerId === 2 ? 
             'bg-gradient-to-r from-red-600/90 to-red-800/90 border border-red-400 shadow-lg' :
             'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
-          ${isMobile ? 'w-full justify-between' : ''}
         `}>
-          <div className={`${isMobile ? 'order-2' : ''} mr-2 text-right`}>
+          <div className="mr-2 text-right">
             <div className="text-white font-bold text-shadow drop-shadow-md">{state.players[1].name}</div>
             <div className="text-xs font-medium text-red-200">Shots: {state.players[1].shotsLeft}/{state.players[1].totalShots}</div>
             <div className="text-xs font-medium text-yellow-200 mt-1">Score: {state.players[1].score}</div>
@@ -340,18 +267,15 @@ const GameBoard: React.FC = () => {
             master={state.players[1].master}
             isActive={state.currentPlayerId === 2}
             isAbilityActive={state.currentPlayerId === 2 && isAbilityActive}
-            className={isMobile ? 'order-1' : ''}
           />
         </div>
       </div>
       
       {/* Game phase indicator */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="bg-gradient-to-r from-blue-900/90 to-indigo-900/90 border-2 border-blue-500/50 px-6 py-2 rounded-full whitespace-nowrap">
-          <div className="text-white font-bold text-shadow drop-shadow-lg flex items-center text-sm md:text-base">
-            {isMobile && state.phase === 'aiming' ? 
-              'Tap and drag to aim' : 
-              !isMobile && state.phase === 'aiming' ? 
+        <div className="bg-gradient-to-r from-blue-900/90 to-indigo-900/90 border-2 border-blue-500/50 px-6 py-2 rounded-full">
+          <div className="text-white font-bold text-shadow drop-shadow-lg flex items-center">
+            {state.phase === 'aiming' ? 
               'Click to shoot' : 
               state.phase === 'shooting' ? 
               'Ball in play...' : 
@@ -359,16 +283,6 @@ const GameBoard: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      {/* Mobile touch instructions (only shown on mobile) */}
-      {isMobile && state.phase === 'aiming' && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 opacity-70 pointer-events-none">
-          <div className="bg-black/40 text-white px-4 py-2 rounded-lg text-center">
-            <div className="text-lg font-semibold">Touch & Drag to Aim</div>
-            <div className="text-sm">Release to Shoot</div>
-          </div>
-        </div>
-      )}
       
       {/* Ball count indicator */}
       <div className="absolute top-4 left-4 flex flex-col items-center z-40">
