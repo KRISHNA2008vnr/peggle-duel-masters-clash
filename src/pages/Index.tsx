@@ -1,13 +1,17 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameProvider, useGame } from '../context/GameContext';
 import GameBoard from '../components/GameBoard';
 import Player from '../components/Player';
 import ScoreBoard from '../components/ScoreBoard';
 import GameOverModal from '../components/GameOverModal';
+import ControllerInstructions from '../components/ControllerInstructions';
+import { useGamepad } from '@/hooks/useGamepad';
+import { Gamepad } from 'lucide-react';
 
 const GameContent = () => {
   const { state, dispatch, masters } = useGame();
+  const [showInstructions, setShowInstructions] = useState(true);
+  const gamepad = useGamepad();
   
   const handleSelectMaster = (playerId: number, masterId: string) => {
     const selectedMaster = masters.find(m => m.id === masterId);
@@ -28,9 +32,38 @@ const GameContent = () => {
   const handleRestart = () => {
     dispatch({ type: 'RESET_GAME' });
   };
+
+  // Auto-hide instructions after a delay
+  useEffect(() => {
+    if (showInstructions) {
+      const timer = setTimeout(() => {
+        setShowInstructions(false);
+      }, 10000); // Hide after 10 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showInstructions]);
+
+  // Show controller connected notification
+  useEffect(() => {
+    if (gamepad.connected) {
+      const controllerName = navigator.getGamepads()[0]?.id || "Xbox Controller";
+      const controllerType = controllerName.includes("Xbox") ? "Xbox" : "Game";
+      
+      // Toast notification for controller connection
+      // This would be implemented if we had a toast system
+    }
+  }, [gamepad.connected]);
   
   return (
     <div className="p-4 md:p-8 flex flex-col items-center">
+      {/* Show controller instructions at start */}
+      {state.phase !== 'selection' && (
+        <ControllerInstructions
+          open={showInstructions}
+          onOpenChange={setShowInstructions}
+        />
+      )}
+      
       {/* Fancy title with better styling */}
       <div className="mb-8">
         <h1 className="text-5xl md:text-6xl font-bold text-center relative z-10 drop-shadow-xl">
@@ -43,6 +76,22 @@ const GameContent = () => {
         </div>
         <div className="absolute h-32 w-full max-w-md left-1/2 -translate-x-1/2 -z-10 blur-xl opacity-30 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 rounded-full"></div>
       </div>
+
+      {/* Controller support indicator */}
+      {gamepad.connected && (
+        <div className="mb-4 bg-gradient-to-r from-purple-600/80 to-indigo-600/80 px-4 py-2 rounded-full shadow-lg border border-purple-400/50">
+          <div className="flex items-center gap-2 text-white">
+            <Gamepad className="h-5 w-5 text-purple-300" />
+            <span className="font-medium">Controller Connected</span>
+            <button
+              onClick={() => setShowInstructions(true)}
+              className="text-xs bg-purple-800/50 px-2 py-1 rounded ml-2 hover:bg-purple-700/50"
+            >
+              Show Controls
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Main content based on game phase */}
       {state.phase === 'selection' ? (

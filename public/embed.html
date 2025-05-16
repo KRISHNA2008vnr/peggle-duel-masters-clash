@@ -23,6 +23,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
     
     .game-frame {
@@ -58,6 +59,26 @@
       background-color: rgba(255, 255, 255, 0.3);
     }
     
+    .controller-icon {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background-color: rgba(128, 90, 213, 0.3);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 12px;
+      z-index: 1000;
+      display: none; /* Hidden by default */
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .controller-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+    
     @media screen and (max-width: 768px) {
       .fullscreen-btn {
         top: 10px;
@@ -65,12 +86,31 @@
         padding: 6px 12px;
         font-size: 14px;
       }
+      
+      .controller-icon {
+        bottom: 10px;
+        right: 10px;
+        padding: 8px;
+      }
+      
+      .controller-icon svg {
+        width: 20px;
+        height: 20px;
+      }
     }
   </style>
 </head>
 <body>
   <div id="game-container">
     <button class="fullscreen-btn" id="fullscreen-toggle">Fullscreen</button>
+    <div class="controller-icon" id="controller-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="11" width="12" height="8" rx="2" />
+        <path d="M12 17v-6" />
+        <path d="M8 8l4-4 4 4" />
+        <path d="M8 14h8" />
+      </svg>
+    </div>
     <iframe src="/" class="game-frame" id="game-frame" allowfullscreen></iframe>
   </div>
 
@@ -78,6 +118,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       const gameFrame = document.getElementById('game-frame');
       const fullscreenBtn = document.getElementById('fullscreen-toggle');
+      const controllerIcon = document.getElementById('controller-icon');
       
       // Handle fullscreen toggle
       fullscreenBtn.addEventListener('click', function() {
@@ -132,6 +173,50 @@
           }, 1000);
         }
       });
+      
+      // Detect gamepad connection
+      window.addEventListener('gamepadconnected', function(e) {
+        console.log('Gamepad connected:', e.gamepad.id);
+        controllerIcon.style.display = 'flex';
+        controllerIcon.style.backgroundColor = 'rgba(138, 43, 226, 0.6)';
+        
+        // Flash animation
+        controllerIcon.style.animation = 'flash 1s';
+        setTimeout(() => {
+          controllerIcon.style.animation = '';
+          controllerIcon.style.backgroundColor = 'rgba(128, 90, 213, 0.3)';
+        }, 1000);
+      });
+      
+      window.addEventListener('gamepaddisconnected', function(e) {
+        console.log('Gamepad disconnected:', e.gamepad.id);
+        controllerIcon.style.display = 'none';
+      });
+      
+      // Check for existing gamepads
+      function checkGamepads() {
+        const gamepads = navigator.getGamepads();
+        for (const gamepad of gamepads) {
+          if (gamepad) {
+            controllerIcon.style.display = 'flex';
+            break;
+          }
+        }
+      }
+      
+      // Check for gamepads on load
+      window.addEventListener('load', checkGamepads);
+      
+      // Create CSS animation for flash
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes flash {
+          0% { background-color: rgba(138, 43, 226, 0.6); }
+          50% { background-color: rgba(138, 43, 226, 1); }
+          100% { background-color: rgba(138, 43, 226, 0.6); }
+        }
+      `;
+      document.head.appendChild(style);
     });
   </script>
 </body>

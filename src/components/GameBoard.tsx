@@ -1,21 +1,26 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useGamePhysics, getPointsForPegType, BOARD_WIDTH, BOARD_HEIGHT } from '../hooks/useGameLogic';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useGamepad } from '@/hooks/useGamepad';
+import ControllerInstructions from './ControllerInstructions';
 import Peg from './Peg';
 import Ball from './Ball';
 import MasterAvatar from './MasterAvatar';
+import { Gamepad } from 'lucide-react';
 
 const LAUNCHER_Y = 50; // Position of the launcher at the top
+const AIM_SPEED = 5; // Speed of aim movement with controller
 
 const GameBoard: React.FC = () => {
   const { state, dispatch } = useGame();
   const [aimPosition, setAimPosition] = useState({ x: BOARD_WIDTH / 2, y: LAUNCHER_Y });
   const [isAbilityActive, setIsAbilityActive] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
   const boardRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const gamepad = useGamepad();
   
   // Get current player and their master
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
@@ -25,6 +30,87 @@ const GameBoard: React.FC = () => {
   useEffect(() => {
     setIsAbilityActive(false);
   }, [state.currentPlayerId]);
+  
+  // Handle gamepad input for aiming and shooting
+  useEffect(() => {
+    if (!gamepad.connected || state.phase !== 'aiming' || state.ballActive) return;
+    
+    // Use left stick for aiming
+    const leftStickX = gamepad.axes.leftStickX;
+    const deadzone = 0.1; // Ignore small stick movements
+    
+    if (Math.abs(leftStickX) > deadzone) {
+      // Update aim position based on stick input
+      const newX = Math.max(0, Math.min(BOARD_WIDTH, aimPosition.x + leftStickX * AIM_SPEED));
+      setAimPosition(prev => ({ ...prev, x: newX }));
+      
+      // Calculate angle for aiming
+      const dx = newX - BOARD_WIDTH / 2;
+      const dy = 200; // Fixed vertical aim
+      const angle = Math.atan2(dy, dx);
+      
+      // Update aim
+      setAim(angle);
+    }
+    
+    // Use A button to launch
+    if (gamepad.buttons.a) {
+      handlePointerUp();
+    }
+    
+    // Use Y button to activate ability
+    if (gamepad.buttons.y && currentMaster) {
+      handleAbilityActivated();
+    }
+    
+    // Use Start button to show/hide instructions
+    if (gamepad.buttons.start) {
+      setShowInstructions(prev => !prev);
+    }
+  }, [gamepad, state.phase, state.ballActive, aimPosition]);
+  
+  // Handle keyboard input for aiming
+  useEffect(() => {
+    if (state.phase !== 'aiming' || state.ballActive) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          setAimPosition(prev => ({ 
+            ...prev, 
+            x: Math.max(0, prev.x - 10)
+          }));
+          break;
+        case 'ArrowRight':
+          setAimPosition(prev => ({ 
+            ...prev, 
+            x: Math.min(BOARD_WIDTH, prev.x + 10)
+          }));
+          break;
+        case 'ArrowUp':
+        case ' ': // Space bar
+          handlePointerUp();
+          break;
+        case 'y':
+        case 'Y':
+          if (currentMaster) handleAbilityActivated();
+          break;
+        case 'h':
+        case 'H':
+          setShowInstructions(prev => !prev);
+          break;
+      }
+      
+      // Recalculate aim angle
+      const dx = aimPosition.x - BOARD_WIDTH / 2;
+      const dy = 200; // Fixed vertical aim
+      const angle = Math.atan2(dy, dx);
+      setAim(angle);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state.phase, state.ballActive, aimPosition, currentMaster]);
   
   // Handle peg hit event
   const handleHitPeg = (pegId: string) => {
@@ -163,168 +249,196 @@ const GameBoard: React.FC = () => {
   const trajectoryPoints = calculateTrajectory(aimPosition.x, aimPosition.y, aimAngle, trajectoryLength);
   
   return (
-    <div 
-      ref={boardRef}
-      data-game-board
-      className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-blue-800"
-      style={{ 
-        width: `${BOARD_WIDTH}px`, 
-        height: `${BOARD_HEIGHT}px`,
-        backgroundImage: 'linear-gradient(180deg, rgba(100,130,220,0.8) 0%, rgba(70,90,180,0.8) 100%)',
-        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)',
-        maxWidth: '100vw',
-        maxHeight: isMobile ? '70vh' : '90vh',
-        transform: isMobile ? 'scale(0.9)' : 'none'
-      }}
-      onMouseMove={handlePointerMove}
-      onTouchMove={handlePointerMove}
-      onClick={handlePointerUp}
-      onTouchEnd={handlePointerUp}
-    >
-      {/* Background elements */}
-      <div className="absolute inset-0 bg-cover bg-center opacity-40" 
-           style={{ 
-             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")'
-           }}>
-      </div>
+    <>
+      <ControllerInstructions 
+        open={showInstructions} 
+        onOpenChange={setShowInstructions} 
+      />
       
-      {/* Light rays effect */}
-      <div className="absolute inset-0 overflow-hidden opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-300/80 via-transparent to-transparent"></div>
-      </div>
-      
-      {/* Pegs */}
-      {state.pegs.map(peg => (
-        <Peg key={peg.id} peg={peg} />
-      ))}
-      
-      {/* Ball */}
-      <Ball ball={state.ball} />
-      
-      {/* Launcher */}
       <div 
-        className={`
-          absolute z-30
-          ${state.phase === 'aiming' ? 'animate-pulse' : ''}
-        `}
-        style={{
-          width: '30px',
-          height: '30px',
-          left: `${aimPosition.x - 15}px`,
-          top: `${aimPosition.y - 15}px`,
-          background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(230,230,240,1) 60%, rgba(200,200,210,0.8) 100%)',
-          borderRadius: '50%',
-          border: '2px solid rgba(150,150,170,0.8)',
-          boxShadow: '0 0 15px rgba(255,255,255,0.8), inset 0 0 8px rgba(0,0,0,0.2)'
+        ref={boardRef}
+        data-game-board
+        className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-blue-800"
+        style={{ 
+          width: `${BOARD_WIDTH}px`, 
+          height: `${BOARD_HEIGHT}px`,
+          backgroundImage: 'linear-gradient(180deg, rgba(100,130,220,0.8) 0%, rgba(70,90,180,0.8) 100%)',
+          boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)',
+          maxWidth: '100vw',
+          maxHeight: isMobile ? '70vh' : '90vh',
+          transform: isMobile ? 'scale(0.9)' : 'none'
         }}
+        onMouseMove={handlePointerMove}
+        onTouchMove={handlePointerMove}
+        onClick={handlePointerUp}
+        onTouchEnd={handlePointerUp}
       >
-        <div className="absolute inset-0 rounded-full border border-white/30"></div>
-      </div>
-      
-      {/* Trajectory guide */}
-      {state.phase === 'aiming' && !state.ballActive && (
-        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-20">
-          <defs>
-            <linearGradient id="trajectoryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(255, 255, 255, 0.8)" />
-              <stop offset="100%" stopColor="rgba(255, 255, 255, 0.2)" />
-            </linearGradient>
-          </defs>
-          <polyline
-            points={trajectoryPoints.map(p => `${p.x},${p.y}`).join(' ')}
-            fill="none"
-            stroke={isAbilityActive && currentMaster?.id === 'bjorn' ? 'url(#trajectoryGradient)' : 'rgba(255, 255, 255, 0.5)'}
-            strokeWidth="2"
-            strokeDasharray="5,5"
-            strokeLinecap="round"
-          />
-        </svg>
-      )}
-      
-      {/* Game UI - Side panels */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-blue-900 to-blue-800 border-r-2 border-blue-700 opacity-80 z-30"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-blue-900 to-blue-800 border-l-2 border-blue-700 opacity-80 z-30"></div>
-      
-      {/* Player indicators */}
-      <div className="absolute top-2 left-20 right-20 flex justify-between items-center z-40">
-        {/* Player 1 indicator */}
-        <div className={`
-          flex items-center space-x-2 p-2 rounded-lg
-          ${state.currentPlayerId === 1 ? 
-            'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border border-blue-400 shadow-lg' :
-            'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
-        `}>
-          <MasterAvatar
-            master={state.players[0].master}
-            isActive={state.currentPlayerId === 1}
-            isAbilityActive={state.currentPlayerId === 1 && isAbilityActive}
-          />
-          <div className="ml-2">
-            <div className="text-white font-bold text-shadow drop-shadow-md">{state.players[0].name}</div>
-            <div className="text-xs font-medium text-blue-200">Shots: {state.players[0].shotsLeft}/{state.players[0].totalShots}</div>
-            <div className="text-xs font-medium text-yellow-200 mt-1">Score: {state.players[0].score}</div>
+        {/* Background elements */}
+        <div className="absolute inset-0 bg-cover bg-center opacity-40" 
+             style={{ 
+               backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")'
+             }}>
+        </div>
+        
+        {/* Light rays effect */}
+        <div className="absolute inset-0 overflow-hidden opacity-20">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-300/80 via-transparent to-transparent"></div>
+        </div>
+        
+        {/* Pegs */}
+        {state.pegs.map(peg => (
+          <Peg key={peg.id} peg={peg} />
+        ))}
+        
+        {/* Ball */}
+        <Ball ball={state.ball} />
+        
+        {/* Launcher */}
+        <div 
+          className={`
+            absolute z-30
+            ${state.phase === 'aiming' ? 'animate-pulse' : ''}
+          `}
+          style={{
+            width: '30px',
+            height: '30px',
+            left: `${aimPosition.x - 15}px`,
+            top: `${aimPosition.y - 15}px`,
+            background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(230,230,240,1) 60%, rgba(200,200,210,0.8) 100%)',
+            borderRadius: '50%',
+            border: '2px solid rgba(150,150,170,0.8)',
+            boxShadow: '0 0 15px rgba(255,255,255,0.8), inset 0 0 8px rgba(0,0,0,0.2)'
+          }}
+        >
+          <div className="absolute inset-0 rounded-full border border-white/30"></div>
+        </div>
+        
+        {/* Trajectory guide */}
+        {state.phase === 'aiming' && !state.ballActive && (
+          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-20">
+            <defs>
+              <linearGradient id="trajectoryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(255, 255, 255, 0.8)" />
+                <stop offset="100%" stopColor="rgba(255, 255, 255, 0.2)" />
+              </linearGradient>
+            </defs>
+            <polyline
+              points={trajectoryPoints.map(p => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke={isAbilityActive && currentMaster?.id === 'bjorn' ? 'url(#trajectoryGradient)' : 'rgba(255, 255, 255, 0.5)'}
+              strokeWidth="2"
+              strokeDasharray="5,5"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+        
+        {/* Game UI - Side panels */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-blue-900 to-blue-800 border-r-2 border-blue-700 opacity-80 z-30"></div>
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-blue-900 to-blue-800 border-l-2 border-blue-700 opacity-80 z-30"></div>
+        
+        {/* Player indicators */}
+        <div className="absolute top-2 left-20 right-20 flex justify-between items-center z-40">
+          {/* Player 1 indicator */}
+          <div className={`
+            flex items-center space-x-2 p-2 rounded-lg
+            ${state.currentPlayerId === 1 ? 
+              'bg-gradient-to-r from-blue-600/90 to-blue-800/90 border border-blue-400 shadow-lg' :
+              'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
+          `}>
+            <MasterAvatar
+              master={state.players[0].master}
+              isActive={state.currentPlayerId === 1}
+              isAbilityActive={state.currentPlayerId === 1 && isAbilityActive}
+            />
+            <div className="ml-2">
+              <div className="text-white font-bold text-shadow drop-shadow-md">{state.players[0].name}</div>
+              <div className="text-xs font-medium text-blue-200">Shots: {state.players[0].shotsLeft}/{state.players[0].totalShots}</div>
+              <div className="text-xs font-medium text-yellow-200 mt-1">Score: {state.players[0].score}</div>
+            </div>
+          </div>
+          
+          {/* Player 2 indicator */}
+          <div className={`
+            flex items-center space-x-2 p-2 rounded-lg
+            ${state.currentPlayerId === 2 ? 
+              'bg-gradient-to-r from-red-600/90 to-red-800/90 border border-red-400 shadow-lg' :
+              'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
+          `}>
+            <div className="mr-2 text-right">
+              <div className="text-white font-bold text-shadow drop-shadow-md">{state.players[1].name}</div>
+              <div className="text-xs font-medium text-red-200">Shots: {state.players[1].shotsLeft}/{state.players[1].totalShots}</div>
+              <div className="text-xs font-medium text-yellow-200 mt-1">Score: {state.players[1].score}</div>
+            </div>
+            <MasterAvatar
+              master={state.players[1].master}
+              isActive={state.currentPlayerId === 2}
+              isAbilityActive={state.currentPlayerId === 2 && isAbilityActive}
+            />
           </div>
         </div>
         
-        {/* Player 2 indicator */}
-        <div className={`
-          flex items-center space-x-2 p-2 rounded-lg
-          ${state.currentPlayerId === 2 ? 
-            'bg-gradient-to-r from-red-600/90 to-red-800/90 border border-red-400 shadow-lg' :
-            'bg-gradient-to-r from-gray-700/70 to-gray-900/70 border border-gray-600'}
-        `}>
-          <div className="mr-2 text-right">
-            <div className="text-white font-bold text-shadow drop-shadow-md">{state.players[1].name}</div>
-            <div className="text-xs font-medium text-red-200">Shots: {state.players[1].shotsLeft}/{state.players[1].totalShots}</div>
-            <div className="text-xs font-medium text-yellow-200 mt-1">Score: {state.players[1].score}</div>
-          </div>
-          <MasterAvatar
-            master={state.players[1].master}
-            isActive={state.currentPlayerId === 2}
-            isAbilityActive={state.currentPlayerId === 2 && isAbilityActive}
-          />
-        </div>
-      </div>
-      
-      {/* Game phase indicator */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="bg-gradient-to-r from-blue-900/90 to-indigo-900/90 border-2 border-blue-500/50 px-6 py-2 rounded-full">
-          <div className="text-white font-bold text-shadow drop-shadow-lg flex items-center">
-            {state.phase === 'aiming' ? 
-              'Click to shoot' : 
-              state.phase === 'shooting' ? 
-              'Ball in play...' : 
-              'Switching players...'}
+        {/* Game phase indicator */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40">
+          <div className="bg-gradient-to-r from-blue-900/90 to-indigo-900/90 border-2 border-blue-500/50 px-6 py-2 rounded-full">
+            <div className="text-white font-bold text-shadow drop-shadow-lg flex items-center">
+              {state.phase === 'aiming' ? 
+                <>
+                  <span className="mr-2">Click to shoot</span>
+                  {gamepad.connected && <Gamepad className="h-4 w-4 text-blue-300" />}
+                </> : 
+                state.phase === 'shooting' ? 
+                'Ball in play...' : 
+                'Switching players...'}
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Ball count indicator */}
-      <div className="absolute top-4 left-4 flex flex-col items-center z-40">
-        <div className="bg-gradient-to-b from-blue-700 to-blue-900 border-2 border-blue-500 p-2 rounded-lg shadow-lg">
-          <div className="text-white font-bold text-xl">
-            {currentPlayer?.shotsLeft || 0}
+        
+        {/* Ball count indicator */}
+        <div className="absolute top-4 left-4 flex flex-col items-center z-40">
+          <div className="bg-gradient-to-b from-blue-700 to-blue-900 border-2 border-blue-500 p-2 rounded-lg shadow-lg">
+            <div className="text-white font-bold text-xl">
+              {currentPlayer?.shotsLeft || 0}
+            </div>
+            <div className="text-xs text-blue-200 mt-1">Balls</div>
           </div>
-          <div className="text-xs text-blue-200 mt-1">Balls</div>
         </div>
-      </div>
-      
-      {/* Score multiplier indicator */}
-      <div className="absolute top-4 right-4 flex flex-col items-center z-40">
-        <div className="bg-gradient-to-b from-yellow-600 to-yellow-800 border-2 border-yellow-500 p-2 rounded-lg shadow-lg">
-          <div className="text-yellow-300 font-bold text-xl flex items-center justify-center">
-            x1
+        
+        {/* Score multiplier indicator */}
+        <div className="absolute top-4 right-4 flex flex-col items-center z-40">
+          <div className="bg-gradient-to-b from-yellow-600 to-yellow-800 border-2 border-yellow-500 p-2 rounded-lg shadow-lg">
+            <div className="text-yellow-300 font-bold text-xl flex items-center justify-center">
+              x1
+            </div>
+            <div className="text-xs text-yellow-200 mt-1">Multiplier</div>
           </div>
-          <div className="text-xs text-yellow-200 mt-1">Multiplier</div>
         </div>
+        
+        {/* Controller indicator */}
+        {gamepad.connected && (
+          <div className="absolute top-4 left-20 flex flex-col items-center z-40">
+            <div className="bg-gradient-to-b from-purple-700 to-purple-900 border-2 border-purple-500 p-2 rounded-lg shadow-lg">
+              <div className="text-white flex items-center">
+                <Gamepad className="h-5 w-5 text-purple-300 mr-1" />
+                <span className="text-xs">Controller Connected</span>
+              </div>
+              <button 
+                onClick={() => setShowInstructions(true)}
+                className="text-xs text-purple-300 mt-1 underline"
+              >
+                Show Controls
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Special effects container */}
+        <div id="effects-container" className="absolute inset-0 pointer-events-none z-50"></div>
+        
+        {/* Bottom bucket/catcher */}
+        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-t-2 border-blue-700 z-30"></div>
       </div>
-      
-      {/* Special effects container */}
-      <div id="effects-container" className="absolute inset-0 pointer-events-none z-50"></div>
-      
-      {/* Bottom bucket/catcher */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-t-2 border-blue-700 z-30"></div>
-    </div>
+    </>
   );
 };
 
