@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Player } from '../types/game';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ScoreBoardProps {
   players: Player[];
@@ -9,7 +9,7 @@ interface ScoreBoardProps {
 }
 
 const ScoreBoard: React.FC<ScoreBoardProps> = ({ players, currentPlayerId }) => {
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col md:flex-row justify-between items-center bg-peggle-background text-white p-3 md:p-4 rounded-lg shadow-md">
