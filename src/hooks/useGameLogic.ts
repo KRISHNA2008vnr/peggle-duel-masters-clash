@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Peg, Ball, Master } from '../types/game';
 import { toast } from '@/hooks/use-toast';
@@ -7,9 +8,9 @@ export const BOARD_WIDTH = 800;
 export const BOARD_HEIGHT = 600;
 export const PEG_RADIUS = 15;
 export const BALL_RADIUS = 10;
-export const GRAVITY = 0.2;
-export const FRICTION = 0.98;
-export const BOUNCE_FACTOR = 0.7;
+export const GRAVITY = 0.25; // Increased from 0.2 for faster vertical movement
+export const FRICTION = 0.99; // Increased from 0.98 for less slowdown
+export const BOUNCE_FACTOR = 0.8; // Increased from 0.7 for more lively bounces
 export const FRAME_RATE = 60; // Higher frame rate for smoother animation
 
 // Function to generate a unique ID
@@ -153,15 +154,15 @@ export const useGamePhysics = (
   // Function to launch the ball
   const launchBall = (startX: number, startY: number, velocityX: number, velocityY: number) => {
     // Adjust velocity based on active abilities
-    let adjustedVx = velocityX;
-    let adjustedVy = velocityY;
+    let adjustedVx = velocityX * 1.5; // Increased initial velocity by 50%
+    let adjustedVy = velocityY * 1.5; // Increased initial velocity by 50%
     let adjustedRadius = BALL_RADIUS;
     
     // Boulder Throw ability - bigger ball with more power
     if (isAbilityActive && currentMaster?.id === 'jeff') {
       adjustedRadius = BALL_RADIUS * 1.8;
-      adjustedVx *= 1.2;
-      adjustedVy *= 1.2;
+      adjustedVx *= 1.3; // Further increase for boulder throw
+      adjustedVy *= 1.3; // Further increase for boulder throw
       toast({
         title: "Boulder Throw Active!",
         description: "Your ball is larger and more powerful",
@@ -189,7 +190,7 @@ export const useGamePhysics = (
     // Deep Freeze ability - reduced friction
     if (isAbilityActive && currentMaster?.id === 'berg') {
       friction = 0.995; // Less friction for slippery effect
-      gravity = 0.15; // Slightly reduced gravity
+      gravity = 0.2; // Slightly reduced gravity, but still faster than original
     }
     
     const newVx = currentBall.vx * friction;

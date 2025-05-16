@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useGamePhysics, getPointsForPegType, BOARD_WIDTH, BOARD_HEIGHT } from '../hooks/useGameLogic';
@@ -140,8 +141,8 @@ const GameBoard: React.FC = () => {
     // Set phase to shooting
     dispatch({ type: 'SET_PHASE', phase: 'shooting' });
     
-    // Calculate initial velocity based on aim angle
-    const power = 15; // Adjust power as needed
+    // Calculate initial velocity based on aim angle with increased power
+    const power = 20; // Increased from 15 for faster initial launch
     const vx = Math.cos(aimAngle) * power;
     const vy = Math.sin(aimAngle) * power;
     
