@@ -8,9 +8,10 @@ interface MasterAvatarProps {
   master: Master | null;
   isActive: boolean;
   isAbilityActive: boolean;
+  className?: string;
 }
 
-const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbilityActive }) => {
+const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbilityActive, className }) => {
   const [animate, setAnimate] = useState(false);
   
   useEffect(() => {
@@ -49,14 +50,14 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
   const playerIconImage = "/lovable-uploads/9ef185f3-6271-499a-8a63-238bfc247e0a.png";
 
   return (
-    <div className={`relative ${isActive ? 'scale-110' : ''} transition-all duration-300`}>
+    <div className={cn(`relative ${isActive ? 'scale-110' : ''} transition-all duration-300`, className)}>
       <div className={cn(`
         relative rounded-full overflow-hidden
         ${isActive ? 'ring-4 ring-white shadow-[0_0_15px_rgba(255,255,255,0.8)]' : ''} 
         ${animate ? 'animate-pulse' : ''}
         ${isAbilityActive ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(255,215,0,0.8)]' : ''}
       `)}>
-        <Avatar className={cn(`w-16 h-16 border-4 ${getMasterBorderColor()}`)}>
+        <Avatar className={cn(`w-12 md:w-16 h-12 md:h-16 border-4 ${getMasterBorderColor()}`)}>
           <AvatarImage src={playerIconImage} alt={master.name} className="object-cover" />
           <AvatarFallback className={cn(`${getMasterBackgroundGradient()} text-white font-bold text-xl`)}>
             {master.name.charAt(0)}
@@ -71,15 +72,15 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
       
       {/* Active ability badge */}
       {isAbilityActive && (
-        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-xs font-bold px-3 py-1 rounded-full animate-bounce shadow-lg border border-yellow-300 text-black">
+        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-xs font-bold px-2 md:px-3 py-1 rounded-full animate-bounce shadow-lg border border-yellow-300 text-black">
           ACTIVE!
         </div>
       )}
       
       {/* Master title text */}
       <div className={cn(`
-        absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-center
-        font-bold text-xs px-2 py-1 rounded-md shadow-md w-24
+        absolute -bottom-5 md:-bottom-6 left-1/2 transform -translate-x-1/2 text-center
+        font-bold text-xs px-2 py-1 rounded-md shadow-md w-16 md:w-24
         ${getMasterBackgroundGradient()} text-white opacity-90
         ${isActive ? 'opacity-100' : 'opacity-70'}
       `)}>
@@ -88,7 +89,7 @@ const MasterAvatar: React.FC<MasterAvatarProps> = ({ master, isActive, isAbility
       
       {/* Active player indicator triangle */}
       {isActive && (
-        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white shadow-md"></div>
+        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-6 md:border-l-8 border-r-6 md:border-r-8 border-b-6 md:border-b-8 border-l-transparent border-r-transparent border-b-white shadow-md"></div>
       )}
     </div>
   );

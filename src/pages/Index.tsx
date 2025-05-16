@@ -32,13 +32,13 @@ const GameContent = () => {
   return (
     <div className="p-4 md:p-8 flex flex-col items-center">
       {/* Fancy title with better styling */}
-      <div className="mb-8">
-        <h1 className="text-5xl md:text-6xl font-bold text-center relative z-10 drop-shadow-xl">
+      <div className="mb-4 md:mb-8">
+        <h1 className="text-4xl md:text-6xl font-bold text-center relative z-10 drop-shadow-xl">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600">
             PEGGLE 2
           </span>
         </h1>
-        <div className="text-2xl md:text-3xl font-semibold text-center text-yellow-300 mt-2 drop-shadow-lg">
+        <div className="text-xl md:text-3xl font-semibold text-center text-yellow-300 mt-2 drop-shadow-lg">
           Local Duel Mode
         </div>
         <div className="absolute h-32 w-full max-w-md left-1/2 -translate-x-1/2 -z-10 blur-xl opacity-30 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 rounded-full"></div>
@@ -47,13 +47,13 @@ const GameContent = () => {
       {/* Main content based on game phase */}
       {state.phase === 'selection' ? (
         <div className="w-full max-w-4xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-center mb-2 text-white">Choose Your Peggle Masters</h2>
+          <div className="text-center mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-semibold text-center mb-2 text-white">Choose Your Peggle Masters</h2>
             <p className="text-gray-300 max-w-lg mx-auto">
               Select a master with unique powers to help you clear pegs and score points!
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {state.players.map(player => (
               <Player 
                 key={player.id}
@@ -71,7 +71,7 @@ const GameContent = () => {
             currentPlayerId={state.currentPlayerId}
           />
           
-          <div className="mt-6 relative">
+          <div className="mt-4 md:mt-6 relative">
             {/* Game board container with enhanced shadow effects */}
             <div className="relative rounded-xl overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-b from-blue-500/50 to-purple-500/50 blur-xl -z-10"></div>
@@ -81,7 +81,7 @@ const GameContent = () => {
             
             {/* Game tips */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-yellow-200 italic font-medium">
+              <p className="text-xs md:text-sm text-yellow-200 italic font-medium">
                 {state.phase === 'aiming' ? 
                   'Tip: Aim carefully to hit green pegs and activate your master power!' : 
                   state.phase === 'shooting' ? 
