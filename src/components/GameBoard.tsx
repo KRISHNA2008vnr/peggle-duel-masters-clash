@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useGamePhysics, getPointsForPegType, BOARD_WIDTH, BOARD_HEIGHT } from '../hooks/useGameLogic';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import Peg from './Peg';
 import Ball from './Ball';
 import MasterAvatar from './MasterAvatar';
@@ -14,6 +14,7 @@ const GameBoard: React.FC = () => {
   const [aimPosition, setAimPosition] = useState({ x: BOARD_WIDTH / 2, y: LAUNCHER_Y });
   const [isAbilityActive, setIsAbilityActive] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   
   // Get current player and their master
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
@@ -82,7 +83,7 @@ const GameBoard: React.FC = () => {
     }
   };
   
-  // Initialize game physics
+  // Initialize game physics with higher FPS
   const { ball, launchBall, setAim, aimAngle, calculateTrajectory, trajectoryLength } = useGamePhysics(
     state.pegs.filter(peg => peg.active),
     currentMaster,
@@ -107,25 +108,33 @@ const GameBoard: React.FC = () => {
     }
   }, [ball, state.phase, state.ballActive, dispatch]);
   
-  // Handle mouse move for aiming
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Handle mouse/touch move for aiming
+  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (state.phase !== 'aiming' || !boardRef.current) return;
     
     const rect = boardRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    let pointerX, pointerY;
+    
+    // Handle both mouse and touch events
+    if ('touches' in e) {
+      pointerX = e.touches[0].clientX - rect.left;
+      pointerY = e.touches[0].clientY - rect.top;
+    } else {
+      pointerX = e.clientX - rect.left;
+      pointerY = e.clientY - rect.top;
+    }
     
     // Calculate angle for aiming
-    const dx = mouseX - aimPosition.x;
-    const dy = mouseY - aimPosition.y;
+    const dx = pointerX - aimPosition.x;
+    const dy = pointerY - aimPosition.y;
     const angle = Math.atan2(dy, dx);
     
     // Update aim
     setAim(angle);
   };
   
-  // Handle mouse click for shooting
-  const handleMouseClick = () => {
+  // Handle click/touch for shooting
+  const handlePointerUp = () => {
     if (state.phase !== 'aiming' || state.ballActive) return;
     
     // Set phase to shooting
@@ -161,10 +170,15 @@ const GameBoard: React.FC = () => {
         width: `${BOARD_WIDTH}px`, 
         height: `${BOARD_HEIGHT}px`,
         backgroundImage: 'linear-gradient(180deg, rgba(100,130,220,0.8) 0%, rgba(70,90,180,0.8) 100%)',
-        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)'
+        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.3), 0 0 30px rgba(0,0,255,0.3)',
+        maxWidth: '100vw',
+        maxHeight: isMobile ? '70vh' : '90vh',
+        transform: isMobile ? 'scale(0.9)' : 'none'
       }}
-      onMouseMove={handleMouseMove}
-      onClick={handleMouseClick}
+      onMouseMove={handlePointerMove}
+      onTouchMove={handlePointerMove}
+      onClick={handlePointerUp}
+      onTouchEnd={handlePointerUp}
     >
       {/* Background elements */}
       <div className="absolute inset-0 bg-cover bg-center opacity-40" 

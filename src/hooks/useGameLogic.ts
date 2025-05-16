@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Peg, Ball, Master } from '../types/game';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +10,7 @@ export const BALL_RADIUS = 10;
 export const GRAVITY = 0.2;
 export const FRICTION = 0.98;
 export const BOUNCE_FACTOR = 0.7;
+export const FRAME_RATE = 60; // Higher frame rate for smoother animation
 
 // Function to generate a unique ID
 export const generateId = (): string => {
@@ -226,79 +226,95 @@ export const useGamePhysics = (
     };
   };
   
-  // Animation frame hook for physics simulation
+  // Animation frame hook for physics simulation with improved frame rate
   useEffect(() => {
     if (!ball) return;
     
-    const gameLoop = setInterval(() => {
-      // Check collisions with pegs
-      let updatedBall = { ...ball };
+    // Use requestAnimationFrame for smoother animations
+    let animationFrameId: number;
+    let lastTime = performance.now();
+    const frameInterval = 1000 / FRAME_RATE;
+    
+    const gameLoop = (currentTime: number) => {
+      animationFrameId = requestAnimationFrame(gameLoop);
       
-      // For Luna's ability, only check collisions with non-blue pegs
-      const visiblePegs = isAbilityActive && currentMaster?.id === 'luna'
-        ? activePegs.filter(peg => peg.type !== 'blue')
-        : activePegs;
+      const deltaTime = currentTime - lastTime;
       
-      let hitPegIds: string[] = [];
-      
-      // Check all pegs for collision
-      for (const peg of visiblePegs) {
-        if (checkCollision(updatedBall, peg)) {
-          updatedBall = handleCollision(updatedBall, peg);
-          hitPegIds.push(peg.id);
-        }
-      }
-      
-      // Process hits - in reverse to avoid index shifting issues
-      for (let i = hitPegIds.length - 1; i >= 0; i--) {
-        // For Gnorman's ability, chain reactions to nearby pegs
-        if (isAbilityActive && currentMaster?.id === 'gnorman' && activePegs.find(p => p.id === hitPegIds[i])?.type !== 'green') {
-          // Find nearby pegs and mark them as hit too
-          const hitPeg = activePegs.find(p => p.id === hitPegIds[i]);
-          if (hitPeg) {
-            const nearbyPegs = activePegs.filter(p => {
-              if (!p.active || hitPegIds.includes(p.id)) return false;
-              
-              const dx = p.x - hitPeg.x;
-              const dy = p.y - hitPeg.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              return distance < 80; // Chain reaction distance
-            });
-            
-            // Add these pegs to hit list
-            hitPegIds.push(...nearbyPegs.map(p => p.id));
+      // Only update physics at the desired frame rate
+      if (deltaTime >= frameInterval) {
+        lastTime = currentTime - (deltaTime % frameInterval);
+        
+        // Check collisions with pegs
+        let updatedBall = { ...ball };
+        
+        // For Luna's ability, only check collisions with non-blue pegs
+        const visiblePegs = isAbilityActive && currentMaster?.id === 'luna'
+          ? activePegs.filter(peg => peg.type !== 'blue')
+          : activePegs;
+        
+        let hitPegIds: string[] = [];
+        
+        // Check all pegs for collision
+        for (const peg of visiblePegs) {
+          if (checkCollision(updatedBall, peg)) {
+            updatedBall = handleCollision(updatedBall, peg);
+            hitPegIds.push(peg.id);
           }
         }
         
-        onHitPeg(hitPegIds[i]);
+        // Process hits - in reverse to avoid index shifting issues
+        for (let i = hitPegIds.length - 1; i >= 0; i--) {
+          // For Gnorman's ability, chain reactions to nearby pegs
+          if (isAbilityActive && currentMaster?.id === 'gnorman' && activePegs.find(p => p.id === hitPegIds[i])?.type !== 'green') {
+            // Find nearby pegs and mark them as hit too
+            const hitPeg = activePegs.find(p => p.id === hitPegIds[i]);
+            if (hitPeg) {
+              const nearbyPegs = activePegs.filter(p => {
+                if (!p.active || hitPegIds.includes(p.id)) return false;
+                
+                const dx = p.x - hitPeg.x;
+                const dy = p.y - hitPeg.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                return distance < 80; // Chain reaction distance
+              });
+              
+              // Add these pegs to hit list
+              hitPegIds.push(...nearbyPegs.map(p => p.id));
+            }
+          }
+          
+          onHitPeg(hitPegIds[i]);
+        }
+        
+        // If we hit a green peg, activate the ability
+        const hitGreenPeg = hitPegIds.some(id => {
+          const peg = activePegs.find(p => p.id === id);
+          return peg && peg.type === 'green';
+        });
+        
+        if (hitGreenPeg) {
+          onAbilityActivated();
+        }
+        
+        // Update ball position
+        const newBallPosition = updateBallPosition(updatedBall);
+        
+        // If ball is out of play (null), cancel animation frame
+        if (!newBallPosition) {
+          cancelAnimationFrame(animationFrameId);
+          setBall(null);
+          return;
+        }
+        
+        // Update ball state
+        setBall(newBallPosition);
       }
-      
-      // If we hit a green peg, activate the ability
-      const hitGreenPeg = hitPegIds.some(id => {
-        const peg = activePegs.find(p => p.id === id);
-        return peg && peg.type === 'green';
-      });
-      
-      if (hitGreenPeg) {
-        onAbilityActivated();
-      }
-      
-      // Update ball position
-      const newBallPosition = updateBallPosition(updatedBall);
-      
-      // If ball is out of play (null), clear the interval
-      if (!newBallPosition) {
-        clearInterval(gameLoop);
-        setBall(null);
-        return;
-      }
-      
-      // Update ball state
-      setBall(newBallPosition);
-    }, 16); // ~60 FPS
+    };
     
-    return () => clearInterval(gameLoop);
+    animationFrameId = requestAnimationFrame(gameLoop);
+    
+    return () => cancelAnimationFrame(animationFrameId);
   }, [ball, activePegs, onHitPeg, isAbilityActive, currentMaster, onAbilityActivated]);
   
   // Function to set the aim angle for the trajectory

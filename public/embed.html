@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Peggle Duel Masters - Fullscreen Game</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #2a0b54;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    #game-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .game-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    
+    .loading {
+      color: white;
+      font-size: 24px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    
+    .fullscreen-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+      z-index: 1000;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    
+    .fullscreen-btn:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    @media screen and (max-width: 768px) {
+      .fullscreen-btn {
+        top: 10px;
+        right: 10px;
+        padding: 6px 12px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <button class="fullscreen-btn" id="fullscreen-toggle">Fullscreen</button>
+    <iframe src="/" class="game-frame" id="game-frame" allowfullscreen></iframe>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const gameFrame = document.getElementById('game-frame');
+      const fullscreenBtn = document.getElementById('fullscreen-toggle');
+      
+      // Handle fullscreen toggle
+      fullscreenBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+          } else if (document.documentElement.webkitRequestFullscreen) {
+            document.documentElement.webkitRequestFullscreen();
+          } else if (document.documentElement.msRequestFullscreen) {
+            document.documentElement.msRequestFullscreen();
+          }
+          fullscreenBtn.textContent = 'Exit Fullscreen';
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+          fullscreenBtn.textContent = 'Fullscreen';
+        }
+      });
+      
+      // Update button text when fullscreen state changes
+      document.addEventListener('fullscreenchange', function() {
+        if (document.fullscreenElement) {
+          fullscreenBtn.textContent = 'Exit Fullscreen';
+        } else {
+          fullscreenBtn.textContent = 'Fullscreen';
+        }
+      });
+      
+      // Handle touch events for mobile
+      document.addEventListener('touchstart', function(e) {
+        // Prevent default browser behavior for touch events
+        // that might interfere with the game
+        if (e.target !== fullscreenBtn) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      
+      // Auto-fullscreen on mobile devices
+      window.addEventListener('load', function() {
+        // Check if it's a mobile device
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+          // Try to go fullscreen automatically on mobile
+          setTimeout(function() {
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen();
+            }
+          }, 1000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

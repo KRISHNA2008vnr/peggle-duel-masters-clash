@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Player } from '../types/game';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ScoreBoardProps {
   players: Player[];
@@ -8,14 +9,16 @@ interface ScoreBoardProps {
 }
 
 const ScoreBoard: React.FC<ScoreBoardProps> = ({ players, currentPlayerId }) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="flex justify-between items-center bg-peggle-background text-white p-4 rounded-lg shadow-md">
+    <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} items-center bg-peggle-background text-white p-4 rounded-lg shadow-md`}>
       {players.map((player) => (
         <div 
           key={player.id} 
           className={`flex flex-col items-center p-2 rounded-lg transition-all ${
             player.id === currentPlayerId ? 'bg-white/20 shadow-lg scale-105' : ''
-          }`}
+          } ${isMobile ? 'mb-4' : ''}`}
         >
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold">{player.name}</h3>
