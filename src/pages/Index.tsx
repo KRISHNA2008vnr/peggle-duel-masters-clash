@@ -46,11 +46,11 @@ const GameContent = () => {
   // Show controller connected notification
   useEffect(() => {
     if (gamepad.connected) {
-      const controllerName = navigator.getGamepads()[0]?.id || "Xbox Controller";
-      const controllerType = controllerName.includes("Xbox") ? "Xbox" : "Game";
+      const controllerName = gamepad.controllerName || "Game Controller";
       
       // Toast notification for controller connection
       // This would be implemented if we had a toast system
+      console.log(`Controller connected: ${controllerName}`);
     }
   }, [gamepad.connected]);
   
@@ -61,6 +61,7 @@ const GameContent = () => {
         <ControllerInstructions
           open={showInstructions}
           onOpenChange={setShowInstructions}
+          controllerName={gamepad.controllerName}
         />
       )}
       
@@ -82,7 +83,7 @@ const GameContent = () => {
         <div className="mb-4 bg-gradient-to-r from-purple-600/80 to-indigo-600/80 px-4 py-2 rounded-full shadow-lg border border-purple-400/50">
           <div className="flex items-center gap-2 text-white">
             <Gamepad className="h-5 w-5 text-purple-300" />
-            <span className="font-medium">Controller Connected</span>
+            <span className="font-medium">Controller Connected: {gamepad.controllerName.split('(')[0].trim()}</span>
             <button
               onClick={() => setShowInstructions(true)}
               className="text-xs bg-purple-800/50 px-2 py-1 rounded ml-2 hover:bg-purple-700/50"

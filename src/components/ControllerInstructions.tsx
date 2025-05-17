@@ -6,16 +6,28 @@ import { Joystick, Gamepad, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 interface ControllerInstructionsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  controllerName?: string;
 }
 
-const ControllerInstructions: React.FC<ControllerInstructionsProps> = ({ open, onOpenChange }) => {
+const ControllerInstructions: React.FC<ControllerInstructionsProps> = ({ 
+  open, 
+  onOpenChange,
+  controllerName 
+}) => {
+  const hasController = !!controllerName;
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-gradient-to-r from-blue-900 to-indigo-900 border-2 border-blue-500 text-white">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl text-blue-300">Game Controls</DialogTitle>
           <DialogDescription className="text-gray-300">
-            You can play this game using keyboard, mouse, or an Xbox controller.
+            You can play this game using keyboard, mouse, or a controller.
+            {hasController && (
+              <div className="mt-2 text-blue-300 text-sm font-medium">
+                Connected controller: {controllerName}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
         
@@ -42,7 +54,24 @@ const ControllerInstructions: React.FC<ControllerInstructionsProps> = ({ open, o
                 <span>Button Y</span>
               </div>
               <span>Activate ability</span>
+              
+              <div className="flex items-center">
+                <div className="w-5 h-5 bg-gray-500 rounded-md mr-2 flex items-center justify-center text-xs">⚙️</div>
+                <span>Start Button</span>
+              </div>
+              <span>Show/Hide Controls</span>
             </div>
+            
+            {hasController && (
+              <div className="mt-2 p-2 bg-blue-800/50 rounded-md">
+                <p className="text-xs text-blue-200">If your controller isn't working correctly, try pressing some buttons to calibrate it, or disconnect and reconnect the controller.</p>
+              </div>
+            )}
+            {!hasController && (
+              <div className="mt-2 p-2 bg-yellow-800/50 rounded-md">
+                <p className="text-xs text-yellow-200">No controller detected. Connect a controller via USB or Bluetooth and press any button.</p>
+              </div>
+            )}
           </div>
           
           <div className="space-y-4">

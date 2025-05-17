@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,6 +78,35 @@
       height: 24px;
     }
     
+    .controller-tooltip {
+      position: absolute;
+      bottom: 70px;
+      right: 20px;
+      background-color: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      z-index: 1001;
+      display: none;
+      max-width: 250px;
+      text-align: center;
+    }
+    
+    .connected {
+      background-color: rgba(138, 43, 226, 0.8) !important;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+    
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    
     @media screen and (max-width: 768px) {
       .fullscreen-btn {
         top: 10px;
@@ -97,6 +125,13 @@
         width: 20px;
         height: 20px;
       }
+      
+      .controller-tooltip {
+        bottom: 50px;
+        right: 10px;
+        font-size: 12px;
+        max-width: 200px;
+      }
     }
   </style>
 </head>
@@ -111,6 +146,9 @@
         <path d="M8 14h8" />
       </svg>
     </div>
+    <div class="controller-tooltip" id="controller-tooltip">
+      No controller detected. Connect a controller and press any button.
+    </div>
     <iframe src="/" class="game-frame" id="game-frame" allowfullscreen></iframe>
   </div>
 
@@ -119,6 +157,8 @@
       const gameFrame = document.getElementById('game-frame');
       const fullscreenBtn = document.getElementById('fullscreen-toggle');
       const controllerIcon = document.getElementById('controller-icon');
+      const controllerTooltip = document.getElementById('controller-tooltip');
+      let gamepadConnected = false;
       
       // Handle fullscreen toggle
       fullscreenBtn.addEventListener('click', function() {
@@ -152,6 +192,15 @@
         }
       });
       
+      // Show tooltip on hover
+      controllerIcon.addEventListener('mouseenter', function() {
+        controllerTooltip.style.display = 'block';
+      });
+      
+      controllerIcon.addEventListener('mouseleave', function() {
+        controllerTooltip.style.display = 'none';
+      });
+      
       // Handle touch events for mobile
       document.addEventListener('touchstart', function(e) {
         // Prevent default browser behavior for touch events
@@ -177,35 +226,102 @@
       // Detect gamepad connection
       window.addEventListener('gamepadconnected', function(e) {
         console.log('Gamepad connected:', e.gamepad.id);
+        gamepadConnected = true;
         controllerIcon.style.display = 'flex';
-        controllerIcon.style.backgroundColor = 'rgba(138, 43, 226, 0.6)';
+        controllerIcon.classList.add('connected');
+        controllerIcon.classList.add('pulse');
         
-        // Flash animation
-        controllerIcon.style.animation = 'flash 1s';
+        // Update tooltip
+        controllerTooltip.textContent = `Connected: ${e.gamepad.id}`;
+        controllerTooltip.style.display = 'block';
+        
+        // Hide tooltip after 3 seconds
         setTimeout(() => {
-          controllerIcon.style.animation = '';
-          controllerIcon.style.backgroundColor = 'rgba(128, 90, 213, 0.3)';
-        }, 1000);
+          controllerTooltip.style.display = 'none';
+          controllerIcon.classList.remove('pulse');
+        }, 3000);
       });
       
       window.addEventListener('gamepaddisconnected', function(e) {
         console.log('Gamepad disconnected:', e.gamepad.id);
-        controllerIcon.style.display = 'none';
+        gamepadConnected = false;
+        controllerIcon.classList.remove('connected');
+        
+        // Update tooltip
+        controllerTooltip.textContent = 'Controller disconnected. Connect a controller and press any button.';
+        
+        // If no gamepads are connected, hide the icon
+        if (!checkForAnyGamepad()) {
+          controllerIcon.style.display = 'none';
+        }
+      });
+      
+      // Check for any connected gamepad
+      function checkForAnyGamepad() {
+        const gamepads = navigator.getGamepads();
+        for (const gamepad of gamepads) {
+          if (gamepad) {
+            gamepadConnected = true;
+            return true;
+          }
+        }
+        gamepadConnected = false;
+        return false;
+      }
+      
+      // Add click event to controller icon
+      controllerIcon.addEventListener('click', function() {
+        controllerTooltip.style.display = controllerTooltip.style.display === 'block' ? 'none' : 'block';
+        
+        // Hide tooltip after 3 seconds
+        if (controllerTooltip.style.display === 'block') {
+          setTimeout(() => {
+            controllerTooltip.style.display = 'none';
+          }, 3000);
+        }
       });
       
       // Check for existing gamepads
       function checkGamepads() {
-        const gamepads = navigator.getGamepads();
-        for (const gamepad of gamepads) {
-          if (gamepad) {
-            controllerIcon.style.display = 'flex';
-            break;
+        if (checkForAnyGamepad()) {
+          controllerIcon.style.display = 'flex';
+          controllerIcon.classList.add('connected');
+          
+          // Get the first connected gamepad
+          const gamepads = navigator.getGamepads();
+          for (const gamepad of gamepads) {
+            if (gamepad) {
+              controllerTooltip.textContent = `Connected: ${gamepad.id}`;
+              break;
+            }
           }
         }
       }
       
       // Check for gamepads on load
       window.addEventListener('load', checkGamepads);
+      
+      // Polling for gamepad to handle browsers that don't fire gamepadconnected events
+      function pollGamepads() {
+        if (!gamepadConnected) {
+          if (checkForAnyGamepad()) {
+            const gamepads = navigator.getGamepads();
+            for (const gamepad of gamepads) {
+              if (gamepad) {
+                console.log('Gamepad detected by polling:', gamepad.id);
+                controllerIcon.style.display = 'flex';
+                controllerIcon.classList.add('connected');
+                controllerTooltip.textContent = `Connected: ${gamepad.id}`;
+                break;
+              }
+            }
+          }
+        }
+        setTimeout(pollGamepads, 2000); // Poll every 2 seconds
+      }
+      
+      // Start polling for gamepad
+      pollGamepads();
       
       // Create CSS animation for flash
       const style = document.createElement('style');
